@@ -1,39 +1,36 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const graphqlHttp = require('express-graphql');
-const { buildSchema } = require('graphql');
+const mongoose = require('mongoose');
+
+const graphQlSchema = require('./graphql/schema/index');
+const graphQlResolvers = require('./graphql/resolvers/index');
+const isAuth = require('./middleware/is-auth');
 
 const app = express();
+
 app.use(bodyParser.json());
-app.listen(3000);
 
-app.get('/',(req, res, next) => {
-    // console.log('yayay')
-    res.send('yayaya');
-});
+app.use(isAuth);
 
-app.use('/graphiql',graphqlHttp({
-    schema: buildSchema(`
-        type RootQuery {
-            events: [String!]!
-        }
-        type RootMutation {
-            createEvent(name: String): String
-        }
-        schema {
-            query: RootQuery
-            mutation: RootMutation
-        }
-    `),
-    rootValue: {
-        events: () => {
-            return ['a','b','c'];
-        },
-        createEvent: (args) => {
-            const eventName = args.name;
-            return args;
-            // return eventName;
-        }
-    },
+app.use(
+  '/graphql',
+  graphqlHttp({
+    schema: graphQlSchema,
+    rootValue: graphQlResolvers,
     graphiql: true
-}));
+  })
+);
+
+mongoose
+  .connect(
+    `mongodb+srv://${process.env.MONGO_USER}:${
+      process.env.MONGO_PASSWORD
+    }@cluster0-tyuir.mongodb.net/${process.env.MONGO_DB}?retryWrites=true` , {useNewUrlParser: true}
+  )
+  .then(() => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
