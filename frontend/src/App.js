@@ -10,11 +10,13 @@ import AuthContext from './context/auth-context';
 import './App.css';
 
 class App extends Component {
-    state = {
-        token: null,
-        userId: null
+  constructor(props) {
+    super(props);
+    this.state = {
+      token: null,
+      userId: null
     };
-
+  };
     login = (token, userId, tokenExpiration) => {
         this.setState({token: token, userId: userId});
     };

@@ -3,19 +3,22 @@ import Modal from '../components/Modal/Modal';
 import Backdrop from '../components/Backdrop/Backdrop';
 import './Events.css';
 import AuthContext from '../context/auth-context';
+import EventList from "../components/Event/EventList/EventList";
+import Spinner from "../components/Spinner/Spinner";
 
 class EventsPage extends Component {
-    state = {
-        creating: false,
-        events: []
-    };
-
     constructor(props) {
         super(props);
         this.titleElementReference = React.createRef();
         this.dateElementReference = React.createRef();
         this.priceElementReference = React.createRef();
         this.descriptionElementReference = React.createRef();
+        this.state = {
+            creating: false,
+            events: [],
+            isLoading: false,
+            selectedEvent: null
+        };
     }
 
     static contextType = AuthContext;
@@ -40,7 +43,8 @@ class EventsPage extends Component {
         }
 
         const requestBody = {
-            query: `mutation {
+            query: `
+            mutation {
                 createEvent(eventInput: {
                     title: "${title}", 
                     description: "${description}", 
@@ -52,10 +56,6 @@ class EventsPage extends Component {
                     description
                     date
                     price
-                    creator {
-                        _id
-                        email
-                    }
                 }
             }`
         };
@@ -75,17 +75,32 @@ class EventsPage extends Component {
             }
             return res.json();
         }).then(responseData => {
-            this.fetchEvents();
+            this.setState(previousState => {
+                const updatedEvents = [...previousState.events];
+                updatedEvents.push({
+                    _id: responseData.data.createEvent._id,
+                    title: responseData.data.createEvent.title,
+                    description: responseData.data.createEvent.description,
+                    date: new Date(responseData.data.createEvent.date),
+                    price: responseData.data.createEvent.price,
+                    creator: {
+                        _id: this.context.userId,
+
+                    }
+                });
+                return {events: updatedEvents};
+            });
         }).catch(error => {
             console.log('error: ', error);
         })
     };
 
     modalCancelHandler = () => {
-        this.setState({creating: false});
+        this.setState({creating: false, selectedEvent: null});
     };
 
     fetchEvents() {
+        this.setState({isLoading: true});
         const requestBody = {
             query: `query {
                 events {
@@ -97,7 +112,7 @@ class EventsPage extends Component {
                     creator{
                         _id
                         email
-                        }
+                    }
                 }
             }`
         };
@@ -114,7 +129,7 @@ class EventsPage extends Component {
             }
             return res.json();
         }).then(responseData => {
-            this.setState({events: responseData.data.events});
+            this.setState({events: responseData.data.events, isLoading: false});
         }).catch(error => {
             console.log('error: ', error);
         })
@@ -124,13 +139,18 @@ class EventsPage extends Component {
         this.fetchEvents();
     }
 
-    render() {
-        const eventList = this.state.events.map(event => {
-            return (
-                <li key={event._id} className='events__list--item'>
-                    {event.title}
-                </li>);
+    handleOnViewDetails = (eventId) => {
+        this.setState(prevState => {
+            const selectedEvent = prevState.events.find(e => e._id === eventId);
+            return {selectedEvent: selectedEvent};
         });
+    };
+
+    handleOnBookEvent = () => {
+    };
+
+    render() {
+
         return (
             <React.Fragment>
                 {this.state.creating && <Backdrop/>}
@@ -160,14 +180,25 @@ class EventsPage extends Component {
                     </form>
                 </Modal>
                 }
+                {this.state.selectedEvent &&
+                <Modal title={this.state.selectedEvent.title}
+                       canCancel
+                       canConfirm
+                       onCancel={this.modalCancelHandler}
+                       onConfirm={this.handleOnBookEvent}>
+                    <h1>{this.state.selectedEvent.title}</h1>
+                    <h3>{this.state.selectedEvent.price}</h3 >
+                    <h4>{this.state.selectedEvent.description}</h4>
+                </Modal>
+                }
                 {this.context.token && <div className={'event-control'}>
                     <p>Share your own events</p>
                     <button className={'btn'} onClick={this.startCreateEVentHandler}>Create event</button>
                 </div>}
 
-                <ul className='events__list'>
-                    {eventList}
-                </ul>
+                {this.state.isLoading && <Spinner/>}
+                {this.state.isLoading || <EventList events={this.state.events} authUserId={this.context.userId}
+                                                    onViewDetail={this.handleOnViewDetails}/>}
             </React.Fragment>
         );
     }

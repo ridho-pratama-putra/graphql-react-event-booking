@@ -4,16 +4,15 @@ import './Auth.css';
 import AuthContext from '../context/auth-context';
 
 class AuthPage extends Component {
-    state = {
-        isLogin: true
-    };
-
     static contextType = AuthContext;
 
     constructor(props) {
         super(props);
         this.emailEl = React.createRef();
         this.passwordEl = React.createRef();
+        this.state = {
+            isLoginPage: true
+        };
     }
 
     switchModeHandler = () => {
@@ -43,7 +42,7 @@ class AuthPage extends Component {
               `
         };
 
-        if (!this.state.isLogin) {
+        if (!this.state.isLoginPage) {
             requestBody = {
                 query: `
                   mutation {
@@ -97,7 +96,7 @@ class AuthPage extends Component {
                 <div className="form-actions">
                     <button type="submit">Submit</button>
                     <button type="button" onClick={this.switchModeHandler}>
-                        Switch to {this.state.isLogin ? 'Signup' : 'Login'}
+                        Switch to {this.state.isLoginPage ? 'Signup' : 'Login'}
                     </button>
                 </div>
             </form>
