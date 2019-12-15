@@ -5,6 +5,7 @@ import './Events.css';
 import AuthContext from '../context/auth-context';
 import EventList from "../components/Event/EventList/EventList";
 import Spinner from "../components/Spinner/Spinner";
+import {CREATE_EVENT} from "../constants/utils";
 
 class EventsPage extends Component {
   constructor(props) {
@@ -42,29 +43,11 @@ class EventsPage extends Component {
       return;
     }
 
-    const requestBody = {
-      query: `
-            mutation {
-                createEvent(eventInput: {
-                    title: "${title}", 
-                    description: "${description}", 
-                    price:${price}, 
-                    date: "${date}" 
-                }) {
-                    _id
-                    title
-                    description
-                    date
-                    price
-                }
-            }`
-    };
-
     const token = this.context.token;
 
     fetch('http://localhost:8000/graphql', {
       method: 'POST',
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(CREATE_EVENT),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -75,17 +58,17 @@ class EventsPage extends Component {
       }
       return res.json();
     }).then(responseData => {
+      const {_id, title, description, date, price} = responseData.data.createEvent;
       this.setState(previousState => {
         const updatedEvents = [...previousState.events];
         updatedEvents.push({
-          _id: responseData.data.createEvent._id,
-          title: responseData.data.createEvent.title,
-          description: responseData.data.createEvent.description,
-          date: new Date(responseData.data.createEvent.date),
-          price: responseData.data.createEvent.price,
+          _id: _id,
+          title: title,
+          description: description,
+          date: new Date(date),
+          price: price,
           creator: {
             _id: this.context.userId,
-
           }
         });
         return {events: updatedEvents};
@@ -155,11 +138,8 @@ class EventsPage extends Component {
     return (
       <React.Fragment>
         {(creating || selectedEvent) && <Backdrop/>}
-        {creating&&
-        <Modal title='Add Event'
-               canCancel
-               canConfirm
-               onCancel={this.modalCancelHandler}
+        {creating &&
+        <Modal title='Add Event' canCancel canConfirm onCancel={this.modalCancelHandler}
                onConfirm={this.modalConfirmHandler}>
           <form>
             <div className='form-control'>
@@ -198,8 +178,8 @@ class EventsPage extends Component {
         </div>}
 
         {isLoading && <Spinner/>}
-        {isLoading || <EventList events={events} authUserId={this.context.userId}
-                                            onViewDetail={this.handleOnViewDetails}/>}
+        {isLoading ||
+        <EventList events={events} authUserId={this.context.userId} onViewDetail={this.handleOnViewDetails}/>}
       </React.Fragment>
     );
   }
